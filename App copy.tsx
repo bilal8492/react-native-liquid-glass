@@ -7,53 +7,53 @@
 
 import React from 'react';
 import { NewAppScreen } from '@react-native/new-app-screen';
-import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { StatusBar, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { TabBar } from './TabBar';
 import { Pattern } from './Pattern';
-import { BackdropFilter, BlendMode, Canvas, ImageFilter, LinearGradient, Rect, vec } from '@shopify/react-native-skia';
+import { Canvas } from '@shopify/react-native-skia';
 import { LiquidGlass } from './LiquidGlass';
+import LinearGradient from 'react-native-linear-gradient';
 import { BlurView } from '@react-native-community/blur';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
 
-  const getRandomColor = () => {
-    const letters = '0123456789ABCDEF';
-    let color = '#';
-    for (let i = 0; i < 6; i++) {
-      color += letters[Math.floor(Math.random() * 16)];
-    }
-    return color;
-  };
-
   return (
     <SafeAreaProvider style={styles.container}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      {/* <AppContent /> */}
+      <TabBar />
+      <View style={{ height: 100, justifyContent: 'center', alignItems: 'center', backgroundColor: '#752828ff', }}>
+        <Text>Hello world</Text>
+      </View>
+      <Canvas style={{ height: 100, width: 300, justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0 }}>
+        {/* <Pattern /> */}
+        {/* <View >
+            <LiquidGlass width={300} height={100} x={0} y={0} radius={10} />
+          </View> */}
+      </Canvas>
+
       <View style={styles.card}>
 
-        {/* <LinearGradient
+        <LinearGradient
           colors={['#333', '#333']}
           start={{ x: 0, y: 1 }}
           end={{ x: 0, y: 0 }}
-          style={[styles.absolute, { isolation: 'isolate',}]}
-        /> */}
-        <View style={[styles.overlay]} />
+          style={[styles.absolute, {}]}
+        >
+          {/* <View style={[ styles.overlay]} /> */}
+
+        </LinearGradient>
 
         {/* Header Section */}
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Book A Test Drive</Text>
-            <View style={{ isolation: 'isolate' }}>
-              <View style={{ mixBlendMode: 'color-dodge' }}>
-                <Text style={styles.subtitle}>
-                  Cancellation Up to 1 day before start time
-                </Text>
-              </View>
-            </View>
+            <Text style={styles.subtitle}>Cancellation Up to 1 day before start time</Text>
           </View>
           {/* <Ionicons name="calendar-outline" size={22} color="#000" /> */}
           <Text>Calender Icon</Text>
@@ -70,55 +70,24 @@ function App() {
           </TouchableOpacity>
         </View>
       </View>
-      <ScrollView nestedScrollEnabled style={{ flex: 1 }}>
+      <View style={{ height: 300, width: '100%',padding:20, backgroundColor: '#752828ff', }}>
+
+      
+      <BlurView blurAmount={80} blurType="light" style={{ height: 200, width: '100%' }}>
+        <LinearGradient
+          colors={['#333', '#333']}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 0, y: 0 }}
+          style={{...StyleSheet.absoluteFill}}
+        >
+          <View style={styles.colorLayer} />
+          {/* Your content here */}
+        </LinearGradient>
+      </BlurView>
+
+      </View>
 
 
-        {/* <AppContent /> */}
-        <TabBar />
-        <View style={{ height: 100, justifyContent: 'center', alignItems: 'center', backgroundColor: '#752828ff', }}>
-          <Text>Hello world</Text>
-        </View>
-        <Canvas style={{ height: 100, width: 300, justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0 }}>
-          {/* <Pattern /> */}
-          {/* <View >
-            <LiquidGlass width={300} height={100} x={0} y={0} radius={10} />
-          </View> */}
-        </Canvas>
-
-
-        {/* <View style={{ height: 300, width: '100%', padding: 20, backgroundColor: '#752828ff', }}>
-
-        <BlurView blurAmount={80} blurType="light" style={{ height: 200, width: '100%' }}>
-          <LinearGradient
-            colors={['#333', '#333']}
-            start={{ x: 0, y: 1 }}
-            end={{ x: 0, y: 0 }}
-            style={{ ...StyleSheet.absoluteFill }}
-          >
-            <View style={styles.colorLayer} />
-          </LinearGradient>
-        </BlurView>
-
-      </View> */}
-
-        <View>
-          {
-            Array.from({ length: 20 }).map((_, index) => {
-              const bgColor = getRandomColor();
-              return (
-                // <View key={index} style={{ height: 200, justifyContent: 'center', alignItems: 'center', backgroundColor: bgColor, }    
-
-                <View key={index} style={{ height: 200, justifyContent: 'center', alignItems: 'center', backgroundColor: bgColor }}>
-                  <Text>Item {index + 1}</Text>
-                </View>
-              )
-            })
-          }
-        </View>
-
-      </ScrollView>
-
-    
     </SafeAreaProvider>
   );
 }
@@ -127,8 +96,7 @@ function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#8d9ea4ff',
-    isolation: 'isolate',
+    backgroundColor: '#ffffffff',
   },
   card: {
     // backgroundColor: "#A6A6A6B2",
@@ -139,12 +107,9 @@ const styles = StyleSheet.create({
     height: 174,
     alignSelf: "center",
     marginTop: 20,
-    // isolation: 'isolate',
+    isolation: 'isolate',
     // mixBlendMode: 'color-dodge',
-    overflow: 'hidden',
-    position: 'absolute',
-    top: 150,
-    zIndex: 10,
+    // overflow: 'hidden',
   },
   absolute: {
     ...StyleSheet.absoluteFill,
@@ -164,16 +129,15 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    color: "#999999",
+    color: "#666",
     marginTop: 2,
-    // mixBlendMode: 'color-dodge',
   },
   bottom: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: '#ffffff',
-    // mixBlendMode: 'normal',
+    mixBlendMode: 'normal',
     borderRadius: 36,
     paddingLeft: 20,
     paddingRight: 16,
@@ -198,9 +162,8 @@ const styles = StyleSheet.create({
   overlay: {
     // backgroundColor: 'rgba(166, 166, 166, 0.7)',
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(166, 166, 166, 0.2)',
-    // mixBlendMode: 'multiply',
-
+    backgroundColor: 'rgba(166, 166, 166, 0.7)',
+    mixBlendMode: 'multiply',
     // isolation:'isolate'
   },
   buttonText: {
