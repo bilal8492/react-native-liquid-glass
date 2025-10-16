@@ -33,17 +33,9 @@ function App() {
   return (
     <SafeAreaProvider style={styles.container}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <View style={styles.card}>
-
-        {/* <LinearGradient
-          colors={['#333', '#333']}
-          start={{ x: 0, y: 1 }}
-          end={{ x: 0, y: 0 }}
-          style={[styles.absolute, { isolation: 'isolate',}]}
-        /> */}
+      {/* <View style={styles.card}>
         <View style={[styles.overlay]} />
 
-        {/* Header Section */}
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Book A Test Drive</Text>
@@ -55,11 +47,9 @@ function App() {
               </View>
             </View>
           </View>
-          {/* <Ionicons name="calendar-outline" size={22} color="#000" /> */}
           <Text>Calender Icon</Text>
         </View>
 
-        {/* Bottom Section */}
         <View style={styles.bottom}>
           <View>
             <Text style={styles.location}>Mumbai</Text>
@@ -69,56 +59,14 @@ function App() {
             <Text style={styles.buttonText}>Book now</Text>
           </TouchableOpacity>
         </View>
-      </View>
-      <ScrollView nestedScrollEnabled style={{ flex: 1 }}>
-
-
-        {/* <AppContent /> */}
-        <TabBar />
-        <View style={{ height: 100, justifyContent: 'center', alignItems: 'center', backgroundColor: '#752828ff', }}>
-          <Text>Hello world</Text>
-        </View>
-        <Canvas style={{ height: 100, width: 300, justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0 }}>
-          {/* <Pattern /> */}
-          {/* <View >
-            <LiquidGlass width={300} height={100} x={0} y={0} radius={10} />
-          </View> */}
-        </Canvas>
-
-
-        {/* <View style={{ height: 300, width: '100%', padding: 20, backgroundColor: '#752828ff', }}>
-
-        <BlurView blurAmount={80} blurType="light" style={{ height: 200, width: '100%' }}>
-          <LinearGradient
-            colors={['#333', '#333']}
-            start={{ x: 0, y: 1 }}
-            end={{ x: 0, y: 0 }}
-            style={{ ...StyleSheet.absoluteFill }}
-          >
-            <View style={styles.colorLayer} />
-          </LinearGradient>
-        </BlurView>
-
       </View> */}
-
-        <View>
-          {
-            Array.from({ length: 20 }).map((_, index) => {
-              const bgColor = getRandomColor();
-              return (
-                // <View key={index} style={{ height: 200, justifyContent: 'center', alignItems: 'center', backgroundColor: bgColor, }    
-
-                <View key={index} style={{ height: 200, justifyContent: 'center', alignItems: 'center', backgroundColor: bgColor }}>
-                  <Text>Item {index + 1}</Text>
-                </View>
-              )
-            })
-          }
-        </View>
-
-      </ScrollView>
-
-    
+      {/* <TabBar /> */}
+      <View style={{ height: 400, width: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'pink',marginTop:200 }}>
+        <Canvas style={{...StyleSheet.absoluteFill}}>
+          <Pattern />
+          <LiquidGlass width={361} height={74} x={20} y={50} radius={40} />
+        </Canvas>
+      </View>
     </SafeAreaProvider>
   );
 }
