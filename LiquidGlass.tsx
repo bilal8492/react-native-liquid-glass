@@ -59,7 +59,7 @@ half4 main(float2 p) {
   float t = sdf.y;
 
   // ============ OUTER GLASSY BORDER - 50% VISIBLE (25% top-left + 25% bottom-right) ============
-  float borderThickness = 12.5;
+  float borderThickness = 3.0;
   
   // Check if we're in the outer border region
   if (d > borderThickness) return vec4(0.0);
@@ -71,33 +71,35 @@ half4 main(float2 p) {
     
     // Create 50% visibility: top-left (25%) + bottom-right (25%)
     // t=0 is right, t=0.25 is top, t=0.5 is left, t=0.75 is bottom, t=1.0 wraps to right
-    
+
     float segmentMask = 0.0;
-    
-    // Top-left segment: 25% from t=0.875 wrapping through t=0.0 to t=0.125
+
+    // Top-left segment: wrapping through t=0.0
     // This covers: bottom-left corner -> top -> top-right corner
-    if (t >= 0.875 || t <= 0.125) {
+    if (t >= 0.975 || t <= 0.465) {
       float fadeIn = 0.0;
       float fadeOut = 0.0;
       
-      if (t >= 0.875) {
-        // Part 1: fade in from 0.875 to 0.9, stay visible until 1.0
-        fadeIn = smoothstep(0.875, 0.9, t);
-        fadeOut = 1.0; // Fully visible at the wrap point
+      if (t >= 0.975) {
+        // Part 1: fade in from 0.975 to 1.0 (approaching wrap point) - LONGER FADE
+        fadeIn = smoothstep(0.975, 0.999, t); // longer fade in from start
+        fadeOut = 1.0; // Stay visible at the wrap point
         segmentMask = fadeIn * fadeOut;
-      } else if (t <= 0.125) {
-        // Part 2: fully visible from 0.0, fade out from 0.1 to 0.125
+      } else if (t <= 0.465) {
+        // Part 2: after wrap, stay visible then fade out at end - LONGER FADE
         fadeIn = 1.0; // Fully visible after the wrap
-        fadeOut = smoothstep(0.125, 0.1, t);
+        fadeOut = smoothstep(0.465, 0.420, t); // longer fade out at end
         segmentMask = fadeIn * fadeOut;
       }
     }
     
     // Bottom-right segment: 25% from t=0.375 to t=0.625
     // This covers: right-bottom corner -> bottom -> left-bottom corner
-    if (t >= 0.375 && t <= 0.625) {
-      float fadeIn = smoothstep(0.375, 0.395, t);
-      float fadeOut = smoothstep(0.625, 0.605, t);
+    if (t >= 0.490 && t <= 0.585) { // 1st param will define where the segment starts 2nd param defines where it ends
+      // fadeIn: gradually increases from 0.490 to 0.525 (longer fade in from start)
+      float fadeIn = smoothstep(0.490, 0.525, t); // fade in from left (longer fade)
+      // fadeOut: gradually decreases from 0.550 to 0.585 (longer fade out at end)
+      float fadeOut = smoothstep(0.585, 0.550, t); // fade out at right (longer fade)
       segmentMask = max(segmentMask, fadeIn * fadeOut);
     }
     
@@ -204,7 +206,7 @@ half4 main(float2 p) {
             "worklet";
 
             const shader = Skia.ImageFilter.MakeShader(baseShader);
-            const sigma = 10; // Blur intensity
+            const sigma = 8; // Blur intensity
             // BlendMode.SrcIn keeps the shader only where the backdrop is visible (inside the box)
             const blendFilter = Skia.ImageFilter.MakeBlend(BlendMode.SrcIn, shader);
 
