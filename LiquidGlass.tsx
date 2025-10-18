@@ -61,13 +61,14 @@ half4 main(float2 p) {
   // ============ OUTER GLASSY BORDER - 50% VISIBLE (25% top-left + 25% bottom-right) ============
   float borderThickness = 3.0;
   
-  // Check if we're in the outer border region
-  if (d > borderThickness) return vec4(0.0);
+  // Check if we're in the INNER border region (inside the shape, near the edge)
+  // Changed from: if (d > borderThickness) to make border grow inward
+  if (d < -borderThickness) return vec4(0.0); // Outside the border region (too far inside)
   
-  // Only render the border (outside the shape, d > 0)
-  if (d > 0.0) {
+  // Only render the border (d > -borderThickness means we're near or outside edge)
+  if (d < 0.0) { // Changed from: if (d > 0.0) - now renders INSIDE the shape
     // Border fade (smooth edges)
-    float borderMask = smoothstep(borderThickness, borderThickness - 2.0, d) * smoothstep(-1.0, 1.0, d);
+    float borderMask = smoothstep(-borderThickness, -borderThickness + 2.0, d) * smoothstep(1.0, -1.0, d);
     
     // Create 50% visibility: top-left (25%) + bottom-right (25%)
     // t=0 is right, t=0.25 is top, t=0.5 is left, t=0.75 is bottom, t=1.0 wraps to right
