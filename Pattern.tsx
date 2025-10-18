@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import {
   Fill,
   ImageShader,
@@ -7,7 +7,7 @@ import {
 } from "@shopify/react-native-skia";
 import { useDerivedValue } from "react-native-reanimated";
 
-export const Pattern = () => {
+export const Pattern = memo(() => {
   const clock = useClock();
   const flower = useImage(require("./assets/flowers.jpg"));
   const rect = useDerivedValue(() => {
@@ -17,11 +17,11 @@ export const Pattern = () => {
     <Fill>
       <ImageShader
         image={flower}
-        rect={rect}
+        // rect={rect}
         fit="contain"
-        tx="repeat"
-        ty="repeat"
+        // tx="repeat"
+        // ty="repeat"
       />
     </Fill>
   );
-};
+});
