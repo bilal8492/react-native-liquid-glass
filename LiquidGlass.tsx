@@ -30,8 +30,9 @@ export const LiquidGlass = ({ width, height, x = 0, y = 0, radius = 0 }) => {
         uniform float r;
         uniform vec2 position;
     `;
-    // 🧠 Simple shader for static rounded box (no morphing, no circle)
-    const source = frag`
+    
+    // 🧠 Shader for the BORDER ONLY (glassy with less blur)
+    const borderSource = frag`
 ${baseUniforms}
 
 vec2 sdRoundedBox(vec2 p, vec2 b, vec4 radius) {
@@ -40,8 +41,10 @@ vec2 sdRoundedBox(vec2 p, vec2 b, vec4 radius) {
   vec2 q = abs(p) - b + radius.x;
   float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - radius.x;
   
-  // Use normalized polar coordinates for edge pattern
-  float t = atan(p.y, p.x) / (2.0 * 3.14159265) + 0.5;
+  // Normalized angle around perimeter (0 = right, 0.25 = top, 0.5 = left, 0.75 = bottom)
+  float angle = atan(p.y, p.x);
+  float t = angle / (2.0 * 3.14159265);
+  if (t < 0.0) t += 1.0; // Normalize to 0-1 range
 
   return vec2(d, t);
 }
@@ -55,12 +58,97 @@ half4 main(float2 p) {
   float d = sdf.x;
   float t = sdf.y;
 
+  // ============ OUTER GLASSY BORDER - 50% VISIBLE (25% top-left + 25% bottom-right) ============
+  float borderThickness = 12.5;
+  
+  // Check if we're in the outer border region
+  if (d > borderThickness) return vec4(0.0);
+  
+  // Only render the border (outside the shape, d > 0)
+  if (d > 0.0) {
+    // Border fade (smooth edges)
+    float borderMask = smoothstep(borderThickness, borderThickness - 2.0, d) * smoothstep(-1.0, 1.0, d);
+    
+    // Create 50% visibility: top-left (25%) + bottom-right (25%)
+    // t=0 is right, t=0.25 is top, t=0.5 is left, t=0.75 is bottom, t=1.0 wraps to right
+    
+    float segmentMask = 0.0;
+    
+    // Top-left segment: 25% from t=0.875 wrapping through t=0.0 to t=0.125
+    // This covers: bottom-left corner -> top -> top-right corner
+    if (t >= 0.875 || t <= 0.125) {
+      float fadeIn = 0.0;
+      float fadeOut = 0.0;
+      
+      if (t >= 0.875) {
+        // Part 1: fade in from 0.875 to 0.9, stay visible until 1.0
+        fadeIn = smoothstep(0.875, 0.9, t);
+        fadeOut = 1.0; // Fully visible at the wrap point
+        segmentMask = fadeIn * fadeOut;
+      } else if (t <= 0.125) {
+        // Part 2: fully visible from 0.0, fade out from 0.1 to 0.125
+        fadeIn = 1.0; // Fully visible after the wrap
+        fadeOut = smoothstep(0.125, 0.1, t);
+        segmentMask = fadeIn * fadeOut;
+      }
+    }
+    
+    // Bottom-right segment: 25% from t=0.375 to t=0.625
+    // This covers: right-bottom corner -> bottom -> left-bottom corner
+    if (t >= 0.375 && t <= 0.625) {
+      float fadeIn = smoothstep(0.375, 0.395, t);
+      float fadeOut = smoothstep(0.625, 0.605, t);
+      segmentMask = max(segmentMask, fadeIn * fadeOut);
+    }
+    
+    // If not in any segment, return transparent
+    if (segmentMask < 0.01) return vec4(0.0);
+    
+    // Pure white for glassy border
+    vec3 whiteColor = vec3(1.0, 1.0, 1.0);
+    
+    // Apply masks with higher opacity for better visibility
+    float finalAlpha = borderMask * segmentMask * 0.9;
+    
+    return vec4(whiteColor, finalAlpha);
+  }
+  
+  // Inside the shape - return transparent for border shader
+  return vec4(0.0);
+}
+`;
+
+    // 🧠 Shader for the GLASS EFFECT (with blur)
+    const glassSource = frag`
+${baseUniforms}
+
+vec2 sdRoundedBox(vec2 p, vec2 b, vec4 radius) {
+  radius.xy = (p.x > 0.0) ? radius.xy : radius.zw;
+  radius.x = (p.y > 0.0) ? radius.x : radius.y;
+  vec2 q = abs(p) - b + radius.x;
+  float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - radius.x;
+  
+  // Use normalized polar coordinates for edge pattern
+  float t = atan(p.y, p.x) / (2.0 * 3.14159265) + 0.59;
+
+  return vec2(d, t);
+}
+
+half4 main(float2 p) {
+  vec2 boxCenter = position;
+  vec2 size = vec2(box.z, box.w);
+  vec2 pos =  p - boxCenter;
+
+  vec2 sdf = sdRoundedBox(pos, size, vec4(${RADIUS}.0));
+  float d = sdf.x;
+  float t = sdf.y;
+
+  // Only render inside the shape (d <= 0)
   if (d > 0.0) return vec4(0.0);
 
-  // Gradient from yellow center to alternating red/green edge
-  float patternFreq = 3.0; // Number of stripes
+  // Original inner content
+  float patternFreq = 3.0;
   float centerFactor = clamp(-d / r, 1.0, 1.0);
-//   float centerFactor = smoothstep(-d / r, 1.0, 1.0);
   float edgePattern = sin(t * 2.0 * 3.14159265 * patternFreq) * 0.5 + 0.5;
 
   vec3 yellow = vec3(0.9, 0.8, 0.0);
@@ -69,6 +157,7 @@ half4 main(float2 p) {
   vec3 edgeColor = mix(red, green, edgePattern);
 
   vec3 color = mix(edgeColor, yellow, centerFactor);
+  
   return vec4(color, 1.0);
 }
 `;
@@ -92,7 +181,7 @@ half4 main(float2 p) {
 
     const box = [width / 2, height / 2, width / 2, height / 2];
 
-    // 🧠 Dummy uniforms (shader still expects them)
+    // 🧠 Uniforms for both shaders
     const uniforms = useDerivedValue(() => {
         return {
             progress: progress.value,
@@ -102,18 +191,20 @@ half4 main(float2 p) {
             position: [x + width / 2, y + height / 2]
         };
     });
-    // Create blur + white overlay filter
-    const filter = useDerivedValue(() => {
+
+    // Create blur filter for glass effect only
+    const glassFilter = useDerivedValue(() => {
         const localMatrix = processTransform2d([]);
-        const shader = source.makeShader(
-            processUniforms(source, uniforms.value),
+        const shader = glassSource.makeShader(
+            processUniforms(glassSource, uniforms.value),
             localMatrix
         );
+
         const filter2 = (baseShader: SkShader) => {
             "worklet";
 
             const shader = Skia.ImageFilter.MakeShader(baseShader);
-            const sigma = 20; // Blur intensity
+            const sigma = 10; // Blur intensity
             // BlendMode.SrcIn keeps the shader only where the backdrop is visible (inside the box)
             const blendFilter = Skia.ImageFilter.MakeBlend(BlendMode.SrcIn, shader);
 
@@ -161,20 +252,96 @@ half4 main(float2 p) {
                     Skia.ImageFilter.MakeBlend(
                         BlendMode.SrcOver,
                         displacementMap,
-                        // whiteTint
-                        lightOverlay
+                        whiteTint
+                        // lightOverlay
                     )
                 )
             );
         };
-        // Default blur+blend filter if none passed
+        return filter2(shader);
+    });
+
+    // Create filter for border (glassy effect with backdrop blur)
+    const borderFilter = useDerivedValue(() => {
+        const localMatrix = processTransform2d([]);
+        const shader = borderSource.makeShader(
+            processUniforms(borderSource, uniforms.value),
+            localMatrix
+        );
+
+        const filter2 = (baseShader: SkShader) => {
+            "worklet";
+            const shaderFilter = Skia.ImageFilter.MakeShader(baseShader);
+            
+            // Moderate blur for glassy effect (less than inner glass)
+            const sigma = 0; // Noticeable blur for glass effect
+            
+            // Blend shader with backdrop to create glass effect
+            const blendFilter = Skia.ImageFilter.MakeBlend(BlendMode.SrcIn, shaderFilter);
+            
+            // White tint for frosted glass appearance
+            const glassTint = Skia.ImageFilter.MakeShader(
+                Skia.Shader.MakeColor(Skia.Color("rgba(251, 251, 251, 0.97)"))
+            );
+            
+            // Light gradient from top-left to bottom-right for depth
+            const lightGradient = Skia.Shader.MakeLinearGradient(
+                vec(0, 0), // top-left
+                vec(width, height), // bottom-right
+                [
+                    Skia.Color("rgba(255, 255, 255, 1)"), // top-left brighter
+                    Skia.Color("rgba(255, 255, 255, 0.4)"), // top-left bright
+                    Skia.Color("rgba(255, 255, 255, 0.2)"), // middle bright
+                    Skia.Color("rgba(255, 255, 255, 0.1)"), // bottom-right subtle
+                    Skia.Color("rgba(255, 255, 255, 0.05)")  // bottom-right subtle
+                ],
+                null,
+                TileMode.Clamp
+            );
+            
+            const gradientFilter = Skia.ImageFilter.MakeShader(lightGradient);
+            
+            // Subtle displacement for refractive glass effect
+            const displacementMap = Skia.ImageFilter.MakeDisplacementMap(
+                ColorChannel.R,
+                ColorChannel.G,
+                15, // Light displacement for subtle refraction
+                shaderFilter
+            );
+            
+            // Combine blur + backdrop + tint + gradient for glassy border
+            return Skia.ImageFilter.MakeCompose(
+                blendFilter,
+                Skia.ImageFilter.MakeBlur(
+                    sigma,
+                    sigma,
+                    TileMode.Clamp,
+                    Skia.ImageFilter.MakeBlend(
+                        BlendMode.SrcOver,
+                        displacementMap,
+                        Skia.ImageFilter.MakeBlend(
+                            BlendMode.Screen, // Adds brightness/glow
+                            glassTint,
+                            gradientFilter
+                        )
+                    )
+                )
+            );
+        };
         return filter2(shader);
     });
 
     return (
         <View>
+            {/* Glass effect with blur */}
             <BackdropFilter
-                filter={<ImageFilter filter={filter} />}
+                clip={{ x, y, width, height }}
+                filter={<ImageFilter filter={glassFilter} />}
+            />
+            {/* Border without blur - rendered on top */}
+            <BackdropFilter
+                clip={{ x: x - 15, y: y - 15, width: width + 30, height: height + 30 }}
+                filter={<ImageFilter filter={borderFilter} />}
             />
         </View>
     );

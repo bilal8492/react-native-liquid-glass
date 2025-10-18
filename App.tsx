@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { NewAppScreen } from '@react-native/new-app-screen';
-import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
@@ -17,6 +17,7 @@ import { Pattern } from './Pattern';
 import { BackdropFilter, BlendMode, Canvas, ImageFilter, LinearGradient, Rect, vec } from '@shopify/react-native-skia';
 import { LiquidGlass } from './LiquidGlass';
 import { BlurView } from '@react-native-community/blur';
+import GlassCircle from './ios/GlassCircle';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -61,8 +62,8 @@ function App() {
         </View>
       </View> */}
       {/* <TabBar /> */}
-      <View style={{ height: 400, width: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'pink',marginTop:200 }}>
-        <Canvas style={{...StyleSheet.absoluteFill}}>
+      <View style={{ height: 400, width: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'pink', marginTop: 200 }}>
+        <Canvas style={{ ...StyleSheet.absoluteFill }}>
           <Pattern />
           <LiquidGlass width={361} height={74} x={20} y={50} radius={40} />
         </Canvas>
