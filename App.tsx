@@ -63,10 +63,7 @@ function App() {
       </View> */}
       {/* <TabBar /> */}
       <View style={{ height: 400, width: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'pink', marginTop: 200 }}>
-        <Canvas style={{ ...StyleSheet.absoluteFill }}>
-          <Pattern />
-          <LiquidGlass width={361} height={74} x={20} y={50} radius={40} />
-        </Canvas>
+        <LiquidGlass width={361} height={74} x={20} y={50} radius={40} />
       </View>
     </SafeAreaProvider>
   );
