@@ -14,6 +14,9 @@ import {
 import { StyleSheet } from 'react-native';
 import { Pattern } from './Pattern';
 
+// Re-export BlendMode for convenience
+export { BlendMode } from '@shopify/react-native-skia';
+
 // ============================================================================
 // TYPES & HELPERS
 // ============================================================================
@@ -55,6 +58,10 @@ interface LiquidGlassProps {
     x?: number;      // X position (default: 0)
     y?: number;      // Y position (default: 0)
     radius?: number; // Corner radius for rounded rectangle (default: 0)
+    blur?: number;   // Blur intensity for glass filter (default: 2)
+    blendMode: BlendMode; // Blend mode for glass filter
+    distortion?: number; // Displacement distortion strength (default: 40)
+    glassColor?: string; // Glass tint color (default: "rgba(94, 94, 94, 0.78)")
 }
 
 // ============================================================================
@@ -78,22 +85,32 @@ interface LiquidGlassProps {
  * Technical Details:
  * - Border grows inward (d < 0) to maintain component bounds
  * - Border segments at 50% visibility: 25% top-left + 25% bottom-right
- * - Glass blur: sigma = 8px for prominent glass effect
+ * - Glass blur: configurable via blur prop (default: 2px)
  * - Border blur: sigma = 0px for crisp edges
  * - Angle-based segment control using polar coordinates (t)
+ * - Blend mode: configurable blend mode for glass effect
+ * - Distortion: displacement mapping strength (default: 40)
+ * - Glass color: tint color applied to the glass effect (default: "rgba(94, 94, 94, 0.78)")
  * 
  * Customization:
  * - Adjust borderThickness in shader (line ~120) to change border width
  * - Modify fade ranges in smoothstep calls (lines ~150-170) to control segment transitions
- * - Change blur sigma values (glass: line ~285, border: line ~330) for blur intensity
+ * - Change blur sigma values (glass: blur prop, border: line ~330) for blur intensity
  * - Update segment angles (t values, lines ~140-145) to reposition border segments
+ * - Use blendMode prop to control the blending effect (ColorDodge, ColorBurn, etc.)
+ * - Adjust distortion prop to control displacement mapping strength
+ * - Use glassColor prop to customize the glass tint color
  */
 export const LiquidGlass: React.FC<LiquidGlassProps> = ({
     width,
     height,
     x = 0,
     y = 0,
-    radius = 0
+    radius = 0,
+    blur = 2,
+    blendMode,
+    distortion = 40,
+    glassColor = "rgba(94, 94, 94, 0.78)"
 }) => {
     const RADIUS = radius;
 
@@ -225,8 +242,8 @@ half4 main(float2 p) {
   float t = sdf.y;
 
   // Create animated color pattern
-  float patternFreq = 3.0;
-  float centerFactor = clamp(-d / r, 1.0, 1.0);
+  float patternFreq = 1.0;
+  float centerFactor = clamp(-d / r, 0.8, 1.0);
   float edgePattern = sin(t * 2.0 * 3.14159265 * patternFreq) * 0.5 + 0.5;
 
   // Define colors
@@ -268,7 +285,6 @@ half4 main(float2 p) {
     // ========================================================================
     // Filter chain: blur (sigma=10) → displacement → white tint → backdrop blend
     // CRITICAL: Using useMemo (not useDerivedValue) to prevent filter recreation
-    const sigma = 10; // Blur intensity
     
     // Cache the shader separately to minimize recreations
     const glassShaderInstance = useMemo(() => {
@@ -284,30 +300,30 @@ half4 main(float2 p) {
         const blendFilter = Skia.ImageFilter.MakeBlend(BlendMode.SrcIn, shaderFilter);
 
         const whiteTint = Skia.ImageFilter.MakeShader(
-            Skia.Shader.MakeColor(Skia.Color("rgba(94, 94, 94, 0.78)"))
+            Skia.Shader.MakeColor(Skia.Color(glassColor))
         );
 
         const displacementMap = Skia.ImageFilter.MakeDisplacementMap(
             ColorChannel.R,
             ColorChannel.G,
-            40,
+            distortion,
             shaderFilter
         );
 
         return Skia.ImageFilter.MakeCompose(
             blendFilter,
             Skia.ImageFilter.MakeBlur(
-                sigma,
-                sigma,
+                blur,
+                blur,
                 TileMode.Decal,
                 Skia.ImageFilter.MakeBlend(
-                    BlendMode.SrcOver,
+                    blendMode,
                     displacementMap,
                     whiteTint
                 )
             )
         );
-    }, [glassShaderInstance, sigma]); // Only recreate when shader changes
+    }, [glassShaderInstance, blur, blendMode, distortion, glassColor]); // Only recreate when shader changes
 
     // ========================================================================
     // BORDER FILTER - Creates light-refractive glassy border segments
