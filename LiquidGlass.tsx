@@ -1,15 +1,15 @@
 import React, { useMemo } from 'react';
 import {
-    Canvas,
-    BackdropFilter,
-    ImageFilter,
-    Skia,
-    TileMode,
-    BlendMode,
-    vec,
-    processTransform2d,
-    processUniforms,
-    ColorChannel
+  Canvas,
+  BackdropFilter,
+  ImageFilter,
+  Skia,
+  TileMode,
+  BlendMode,
+  vec,
+  processTransform2d,
+  processUniforms,
+  ColorChannel,
 } from '@shopify/react-native-skia';
 import { StyleSheet } from 'react-native';
 import { Pattern } from './Pattern';
@@ -29,10 +29,10 @@ type Values = Value[];
  * Used for creating GLSL shader code with dynamic values
  */
 const glsl = (source: TemplateStringsArray, ...values: Values) => {
-    const processed = source
-        .flatMap((s, i) => [s, values[i] ?? ''])
-        .filter(v => v !== undefined && v !== null);
-    return processed.join("");
+  const processed = source
+    .flatMap((s, i) => [s, values[i] ?? ''])
+    .filter(v => v !== undefined && v !== null);
+  return processed.join('');
 };
 
 /**
@@ -40,12 +40,12 @@ const glsl = (source: TemplateStringsArray, ...values: Values) => {
  * @throws Error if shader compilation fails
  */
 const frag = (source: TemplateStringsArray, ...values: Values) => {
-    const code = glsl(source, ...values);
-    const rt = Skia.RuntimeEffect.Make(code);
-    if (rt === null) {
-        throw new Error("Couldn't compile shader");
-    }
-    return rt;
+  const code = glsl(source, ...values);
+  const rt = Skia.RuntimeEffect.Make(code);
+  if (rt === null) {
+    throw new Error("Couldn't compile shader");
+  }
+  return rt;
 };
 
 // ============================================================================
@@ -53,15 +53,20 @@ const frag = (source: TemplateStringsArray, ...values: Values) => {
 // ============================================================================
 
 interface LiquidGlassProps {
-    width: number;   // Width of the glass component
-    height: number;  // Height of the glass component
-    x?: number;      // X position (default: 0)
-    y?: number;      // Y position (default: 0)
-    radius?: number; // Corner radius for rounded rectangle (default: 0)
-    blur?: number;   // Blur intensity for glass filter (default: 2)
-    blendMode: BlendMode; // Blend mode for glass filter
-    distortion?: number; // Displacement distortion strength (default: 40)
-    glassColor?: string; // Glass tint color (default: "rgba(94, 94, 94, 0.78)")
+  width: number; // Width of the glass component
+  height: number; // Height of the glass component
+  x?: number; // X position (default: 0)
+  y?: number; // Y position (default: 0)
+  radius?: number; // Corner radius for rounded rectangle (default: 0)
+  blur?: number; // Blur intensity for glass filter (default: 2)
+  blendMode: BlendMode; // Blend mode for glass filter
+  distortion?: number; // Displacement distortion strength (default: 40)
+  glassColor?: string; // Glass tint color (default: "rgba(94, 94, 94, 0.78)")
+  glassLayers?: Array<{
+    // Multiple glass layers with different colors and blend modes
+    color: string;
+    blendMode: BlendMode;
+  }>;
 }
 
 // ============================================================================
@@ -70,18 +75,18 @@ interface LiquidGlassProps {
 
 /**
  * LiquidGlass Component
- * 
+ *
  * A customizable glass morphism effect component with animated border segments.
- * Uses React Native Skia for high-performance rendering and GLSL shaders for 
+ * Uses React Native Skia for high-performance rendering and GLSL shaders for
  * custom visual effects.
- * 
+ *
  * Features:
  * - Dual-layer rendering: main glass effect + separate border effect
  * - GLSL-based signed distance functions for precise shape rendering
  * - Animated border segments with smooth fade transitions
  * - Light refraction simulation with displacement mapping
  * - Configurable positioning and dimensions
- * 
+ *
  * Technical Details:
  * - Border grows inward (d < 0) to maintain component bounds
  * - Border segments at 50% visibility: 25% top-left + 25% bottom-right
@@ -91,7 +96,8 @@ interface LiquidGlassProps {
  * - Blend mode: configurable blend mode for glass effect
  * - Distortion: displacement mapping strength (default: 40)
  * - Glass color: tint color applied to the glass effect (default: "rgba(94, 94, 94, 0.78)")
- * 
+ * - Glass layers: multiple layered tints with different colors and blend modes
+ *
  * Customization:
  * - Adjust borderThickness in shader (line ~120) to change border width
  * - Modify fade ranges in smoothstep calls (lines ~150-170) to control segment transitions
@@ -100,22 +106,24 @@ interface LiquidGlassProps {
  * - Use blendMode prop to control the blending effect (ColorDodge, ColorBurn, etc.)
  * - Adjust distortion prop to control displacement mapping strength
  * - Use glassColor prop to customize the glass tint color
+ * - Use glassLayers prop for complex multi-layered glass effects with different blend modes
  */
 export const LiquidGlass: React.FC<LiquidGlassProps> = ({
-    width,
-    height,
-    x = 0,
-    y = 0,
-    radius = 0,
-    blur = 2,
-    blendMode,
-    distortion = 40,
-    glassColor = "rgba(94, 94, 94, 0.78)"
+  width,
+  height,
+  x = 0,
+  y = 0,
+  radius = 0,
+  blur = 2,
+  blendMode,
+  distortion = 40,
+  glassColor = 'rgba(94, 94, 94, 0.78)',
+  glassLayers,
 }) => {
-    const RADIUS = radius;
+  const RADIUS = radius;
 
-    // Shared uniforms used by both shaders
-    const baseUniforms = glsl`
+  // Shared uniforms used by both shaders
+  const baseUniforms = glsl`
         uniform float progress;  // Animation progress (unused currently)
         uniform vec2 c1;         // Control point (unused currently)
         uniform vec4 box;        // Box dimensions [left, top, right, bottom]
@@ -123,10 +131,10 @@ export const LiquidGlass: React.FC<LiquidGlassProps> = ({
         uniform vec2 position;   // Center position of the glass
     `;
 
-    // ========================================================================
-    // BORDER SHADER - Renders the glassy border effect
-    // ========================================================================
-    const borderSource = frag`
+  // ========================================================================
+  // BORDER SHADER - Renders the glassy border effect
+  // ========================================================================
+  const borderSource = frag`
 ${baseUniforms}
 
 /**
@@ -215,10 +223,10 @@ half4 main(float2 p) {
 }
 `;
 
-    // ========================================================================
-    // GLASS SHADER - Renders the main glass effect with colorful pattern
-    // ========================================================================
-    const glassSource = frag`
+  // ========================================================================
+  // GLASS SHADER - Renders the main glass effect with colorful pattern
+  // ========================================================================
+  const glassSource = frag`
 ${baseUniforms}
 
 vec2 sdRoundedBox(vec2 p, vec2 b, vec4 radius) {
@@ -263,160 +271,196 @@ half4 main(float2 p) {
 }
 `;
 
-    // Box dimensions: center position and half-widths
-    const box = useMemo(() => [width / 2, height / 2, width / 2, height / 2], [width, height]);
+  // Box dimensions: center position and half-widths
+  const box = useMemo(
+    () => [width / 2, height / 2, width / 2, height / 2],
+    [width, height],
+  );
 
-    // ========================================================================
-    // UNIFORMS - Shared parameters passed to both shaders
-    // ========================================================================
-    // Completely static uniforms - no animation system
-    const uniforms = useMemo(() => {
-        return {
-            progress: 0,
-            c1: vec(0, 0),
-            box: box,
-            r: RADIUS,
-            position: [x + width / 2, y + height / 2]
-        };
-    }, [box, RADIUS, x, y, width, height]);
+  // ========================================================================
+  // UNIFORMS - Shared parameters passed to both shaders
+  // ========================================================================
+  // Completely static uniforms - no animation system
+  const uniforms = useMemo(() => {
+    return {
+      progress: 0,
+      c1: vec(0, 0),
+      box: box,
+      r: RADIUS,
+      position: [x + width / 2, y + height / 2],
+    };
+  }, [box, RADIUS, x, y, width, height]);
 
-    // ========================================================================
-    // GLASS FILTER - Creates main glass morphism blur effect
-    // ========================================================================
-    // Filter chain: blur (sigma=10) → displacement → white tint → backdrop blend
-    // CRITICAL: Using useMemo (not useDerivedValue) to prevent filter recreation
-    
-    // Cache the shader separately to minimize recreations
-    const glassShaderInstance = useMemo(() => {
-        const localMatrix = processTransform2d([]);
-        return glassSource.makeShader(
-            processUniforms(glassSource, uniforms),
-            localMatrix
-        );
-    }, [uniforms]); // Remove glassSource from deps - it's stable
-    
-    const glassFilter = useMemo(() => {
-        const shaderFilter = Skia.ImageFilter.MakeShader(glassShaderInstance);
-        const blendFilter = Skia.ImageFilter.MakeBlend(BlendMode.SrcIn, shaderFilter);
+  // ========================================================================
+  // GLASS FILTER - Creates main glass morphism blur effect
+  // ========================================================================
+  // Filter chain: blur (sigma=10) → displacement → white tint → backdrop blend
+  // CRITICAL: Using useMemo (not useDerivedValue) to prevent filter recreation
 
-        const whiteTint = Skia.ImageFilter.MakeShader(
-            Skia.Shader.MakeColor(Skia.Color(glassColor))
-        );
-
-        const displacementMap = Skia.ImageFilter.MakeDisplacementMap(
-            ColorChannel.R,
-            ColorChannel.G,
-            distortion,
-            shaderFilter
-        );
-
-        return Skia.ImageFilter.MakeCompose(
-            blendFilter,
-            Skia.ImageFilter.MakeBlur(
-                blur,
-                blur,
-                TileMode.Decal,
-                Skia.ImageFilter.MakeBlend(
-                    blendMode,
-                    displacementMap,
-                    whiteTint
-                )
-            )
-        );
-    }, [glassShaderInstance, blur, blendMode, distortion, glassColor]); // Only recreate when shader changes
-
-    // ========================================================================
-    // BORDER FILTER - Creates light-refractive glassy border segments
-    // ========================================================================
-    // Filter chain: no blur (sigma=0) → displacement → gradient → glass tint
-    
-    // Cache the shader separately
-    const borderShaderInstance = useMemo(() => {
-        const localMatrix = processTransform2d([]);
-        return borderSource.makeShader(
-            processUniforms(borderSource, uniforms),
-            localMatrix
-        );
-    }, [uniforms]); // Add uniforms dependency
-    
-    const borderFilter = useMemo(() => {
-        const shaderFilter = Skia.ImageFilter.MakeShader(borderShaderInstance);
-        const sigma = 0;
-
-        const blendFilter = Skia.ImageFilter.MakeBlend(BlendMode.SrcIn, shaderFilter);
-
-        const glassTint = Skia.ImageFilter.MakeShader(
-            Skia.Shader.MakeColor(Skia.Color("rgba(251, 251, 251, 0.97)"))
-        );
-
-        const lightGradient = Skia.Shader.MakeLinearGradient(
-            vec(0, 0),
-            vec(width, height),
-            [
-                Skia.Color("rgba(255, 255, 255, 1)"),
-                Skia.Color("rgba(255, 255, 255, 0.4)"),
-                Skia.Color("rgba(255, 255, 255, 0.2)"),
-                Skia.Color("rgba(255, 255, 255, 0.1)"),
-                Skia.Color("rgba(255, 255, 255, 0.05)")
-            ],
-            null,
-            TileMode.Clamp
-        );
-
-        const gradientFilter = Skia.ImageFilter.MakeShader(lightGradient);
-
-        const displacementMap = Skia.ImageFilter.MakeDisplacementMap(
-            ColorChannel.R,
-            ColorChannel.G,
-            15,
-            shaderFilter
-        );
-
-        return Skia.ImageFilter.MakeCompose(
-            blendFilter,
-            Skia.ImageFilter.MakeBlur(
-                sigma,
-                sigma,
-                TileMode.Clamp,
-                Skia.ImageFilter.MakeBlend(
-                    BlendMode.SrcOver,
-                    displacementMap,
-                    Skia.ImageFilter.MakeBlend(
-                        BlendMode.Screen,
-                        glassTint,
-                        gradientFilter
-                    )
-                )
-            )
-        );
-    }, [borderShaderInstance, width, height]);
-
-    // ========================================================================
-    // RENDER - Layered BackdropFilters create glass morphism effect
-    // ========================================================================
-    // Layer 1: Pattern background
-    // Layer 2: Glass effect with heavy blur (8px) - renders first (underneath)
-    // Layer 3: Border effect with no blur - renders second (on top)
-    //
-    // Clip regions:
-    // - Glass: exact component bounds (x, y, width, height)
-    // - Border: extended bounds (±15px padding) to accommodate inward-growing border
-    return (
-        <Canvas style={{ ...StyleSheet.absoluteFill }}>
-            {/* Background pattern - TEMPORARILY REMOVED to test flickering */}
-            <Pattern />
-
-            {/* Main glass effect with blur - rendered underneath */}
-            <BackdropFilter
-                clip={{ x, y, width, height }}
-                filter={<ImageFilter filter={glassFilter} />}
-            />
-
-            {/* Glassy border segments - rendered on top without blur */}
-            <BackdropFilter
-                clip={{ x: x - 15, y: y - 15, width: width + 30, height: height + 30 }}
-                filter={<ImageFilter filter={borderFilter} />}
-            />
-        </Canvas>
+  // Cache the shader separately to minimize recreations
+  const glassShaderInstance = useMemo(() => {
+    const localMatrix = processTransform2d([]);
+    return glassSource.makeShader(
+      processUniforms(glassSource, uniforms),
+      localMatrix,
     );
+  }, [uniforms]); // Remove glassSource from deps - it's stable
+
+  const glassFilter = useMemo(() => {
+    const shaderFilter = Skia.ImageFilter.MakeShader(glassShaderInstance);
+    const blendFilter = Skia.ImageFilter.MakeBlend(
+      BlendMode.SrcIn,
+      shaderFilter,
+    );
+
+    const displacementMap = Skia.ImageFilter.MakeDisplacementMap(
+      ColorChannel.R,
+      ColorChannel.G,
+      distortion,
+      shaderFilter,
+    );
+
+    // Helper function to compose multiple glass layers
+    const composeGlassLayers = (
+      baseFilter: any,
+      layers?: Array<{ color: string; blendMode: BlendMode }>,
+    ) => {
+      if (!layers || layers.length === 0) {
+        // Fallback to single layer with glassColor
+        const whiteTint = Skia.ImageFilter.MakeShader(
+          Skia.Shader.MakeColor(Skia.Color(glassColor)),
+        );
+        return Skia.ImageFilter.MakeBlend(blendMode, baseFilter, whiteTint);
+      }
+
+      // Start with the base filter
+      let currentFilter = baseFilter;
+
+      // Apply each layer on top of the previous one
+      for (const layer of layers) {
+        const layerTint = Skia.ImageFilter.MakeShader(
+          Skia.Shader.MakeColor(Skia.Color(layer.color)),
+        );
+        currentFilter = Skia.ImageFilter.MakeBlend(
+          layer.blendMode,
+          currentFilter,
+          layerTint,
+        );
+      }
+
+      return currentFilter;
+    };
+
+    const layeredFilter = composeGlassLayers(displacementMap, glassLayers);
+
+    return Skia.ImageFilter.MakeCompose(
+      blendFilter,
+      Skia.ImageFilter.MakeBlur(blur, blur, TileMode.Decal, layeredFilter),
+    );
+  }, [
+    glassShaderInstance,
+    blur,
+    blendMode,
+    distortion,
+    glassColor,
+    glassLayers,
+  ]); // Only recreate when shader changes
+
+  // ========================================================================
+  // BORDER FILTER - Creates light-refractive glassy border segments
+  // ========================================================================
+  // Filter chain: no blur (sigma=0) → displacement → gradient → glass tint
+
+  // Cache the shader separately
+  const borderShaderInstance = useMemo(() => {
+    const localMatrix = processTransform2d([]);
+    return borderSource.makeShader(
+      processUniforms(borderSource, uniforms),
+      localMatrix,
+    );
+  }, [uniforms]); // Add uniforms dependency
+
+  const borderFilter = useMemo(() => {
+    const shaderFilter = Skia.ImageFilter.MakeShader(borderShaderInstance);
+    const sigma = 0;
+
+    const blendFilter = Skia.ImageFilter.MakeBlend(
+      BlendMode.SrcIn,
+      shaderFilter,
+    );
+
+    const glassTint = Skia.ImageFilter.MakeShader(
+      Skia.Shader.MakeColor(Skia.Color('rgba(251, 251, 251, 0.97)')),
+    );
+
+    const lightGradient = Skia.Shader.MakeLinearGradient(
+      vec(0, 0),
+      vec(width, height),
+      [
+        Skia.Color('rgba(255, 255, 255, 1)'),
+        Skia.Color('rgba(255, 255, 255, 0.4)'),
+        Skia.Color('rgba(255, 255, 255, 0.2)'),
+        Skia.Color('rgba(255, 255, 255, 0.1)'),
+        Skia.Color('rgba(255, 255, 255, 0.05)'),
+      ],
+      null,
+      TileMode.Clamp,
+    );
+
+    const gradientFilter = Skia.ImageFilter.MakeShader(lightGradient);
+
+    const displacementMap = Skia.ImageFilter.MakeDisplacementMap(
+      ColorChannel.R,
+      ColorChannel.G,
+      15,
+      shaderFilter,
+    );
+
+    return Skia.ImageFilter.MakeCompose(
+      blendFilter,
+      Skia.ImageFilter.MakeBlur(
+        sigma,
+        sigma,
+        TileMode.Clamp,
+        Skia.ImageFilter.MakeBlend(
+          BlendMode.SrcOver,
+          displacementMap,
+          Skia.ImageFilter.MakeBlend(
+            BlendMode.Screen,
+            glassTint,
+            gradientFilter,
+          ),
+        ),
+      ),
+    );
+  }, [borderShaderInstance, width, height]);
+
+  // ========================================================================
+  // RENDER - Layered BackdropFilters create glass morphism effect
+  // ========================================================================
+  // Layer 1: Pattern background
+  // Layer 2: Glass effect with heavy blur (8px) - renders first (underneath)
+  // Layer 3: Border effect with no blur - renders second (on top)
+  //
+  // Clip regions:
+  // - Glass: exact component bounds (x, y, width, height)
+  // - Border: extended bounds (±15px padding) to accommodate inward-growing border
+  return (
+    <Canvas style={{ ...StyleSheet.absoluteFill }}>
+      {/* Background pattern - TEMPORARILY REMOVED to test flickering */}
+      <Pattern />
+
+      {/* Main glass effect with blur - rendered underneath */}
+      <BackdropFilter
+        clip={{ x, y, width, height }}
+        filter={<ImageFilter filter={glassFilter} />}
+      />
+
+      {/* Glassy border segments - rendered on top without blur */}
+      <BackdropFilter
+        clip={{ x: x - 15, y: y - 15, width: width + 30, height: height + 30 }}
+        filter={<ImageFilter filter={borderFilter} />}
+      />
+    </Canvas>
+  );
 };
